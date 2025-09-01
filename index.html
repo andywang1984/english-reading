@@ -47,17 +47,21 @@
         .vocab-term:hover {
             text-decoration: underline;
         }
+        .auto-resize {
+            overflow: hidden;
+            resize: none;
+        }
     </style>
 </head>
 <body class="bg-gray-100 min-h-screen flex flex-col items-center py-12 px-4">
-    <div class="container mx-auto p-10 bg-white rounded-3xl shadow-2xl border border-gray-200">
-        <h1 class="text-5xl font-extrabold text-center mb-8 text-gray-800 tracking-tight">英文閱讀網站</h1>
+    <div class="container mx-auto p-4 sm:p-10 bg-white rounded-3xl shadow-2xl border border-gray-200">
+        <h1 class="text-3xl sm:text-5xl font-extrabold text-center mb-8 text-gray-800 tracking-tight">英文閱讀網站</h1>
         
         <!-- Controls Section -->
         <div class="space-y-6 mb-10">
             <div class="flex flex-col sm:flex-row items-center space-y-4 sm:space-y-0 sm:space-x-4 w-full">
-                <input id="topicInput" type="text" placeholder="輸入文章主題，例如：大谷翔平" class="flex-grow p-4 rounded-xl border border-gray-300 focus:outline-none focus:ring-4 focus:ring-indigo-300 transition-all duration-200 text-lg shadow-sm" />
-                <button id="randomTopicBtn" class="bg-gray-100 text-gray-700 font-semibold py-4 px-8 rounded-xl hover:bg-gray-200 transition-colors duration-200 flex-shrink-0 shadow-sm border border-gray-300">隨機主題</button>
+                <textarea id="topicInput" rows="1" placeholder="請輸入主題，例如：大谷翔平、鬼滅之刃" class="auto-resize w-full sm:flex-grow p-4 rounded-xl border border-gray-300 focus:outline-none focus:ring-4 focus:ring-indigo-300 transition-all duration-200 text-lg shadow-sm"></textarea>
+                <button id="randomTopicBtn" class="w-full sm:w-auto bg-gray-100 text-gray-700 font-semibold py-4 px-8 rounded-xl hover:bg-gray-200 transition-colors duration-200 flex-shrink-0 shadow-sm border border-gray-300">隨機主題</button>
             </div>
 
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
@@ -95,14 +99,14 @@
         </div>
 
         <!-- Article Content -->
-        <div id="articleContainer" class="hidden relative p-8 bg-gray-50 rounded-3xl shadow-inner border border-gray-200">
+        <div id="articleContainer" class="hidden relative p-4 sm:p-8 bg-gray-50 rounded-3xl shadow-inner border border-gray-200">
             <!-- Tabs -->
-            <div class="flex space-x-8 mb-6 border-b-2 border-gray-200">
+            <div class="flex space-x-4 sm:space-x-8 mb-6 border-b-2 border-gray-200">
                 <button id="articleTabBtn" class="tab-button font-extrabold text-gray-700 py-3 px-1 text-lg active">文章</button>
                 <button id="vocabTabBtn" class="tab-button font-extrabold text-gray-700 py-3 px-1 text-lg">單字解說</button>
             </div>
             
-            <h2 id="articleTitle" class="text-3xl font-bold mb-6 text-center text-gray-700"></h2>
+            <h2 id="articleTitle" class="text-2xl sm:text-3xl font-bold mb-6 text-center text-gray-700 break-words"></h2>
 
             <!-- Tab Content -->
             <div id="articleContent" class="tab-content">
@@ -160,112 +164,35 @@
         let articleData = null;
 
         const randomTopics = [
-            { en: 'The Life of a Sloth', zh: '關於樹懶的一生' },
-            { en: 'The History of Pizza', zh: '披薩的歷史' },
-            { en: 'Why Cats Purr', zh: '為什麼貓會發出呼嚕聲' },
-            { en: 'The Great Wall of China', zh: '萬里長城' },
+            { en: 'Shohei Ohtani', zh: '大谷翔平' },
+            { en: 'Demon Slayer', zh: '鬼滅之刃' },
+            { en: 'Bubble Tea', zh: '珍珠奶茶' },
+            { en: 'Night Markets in Taiwan', zh: '台灣夜市' },
+            { en: 'The Taipei 101', zh: '台北101' },
+            { en: 'Taiwan\'s High-Speed Rail', zh: '台灣高鐵' },
             { en: 'How a Car Engine Works', zh: '汽車引擎如何運作' },
             { en: 'The Aurora Borealis', zh: '北極光' },
-            { en: 'Famous Scientists', zh: '著名的科學家們' },
-            { en: 'The World of Spices', zh: '香料的世界' },
-            { en: 'Ancient Egyptian Pyramids', zh: '古埃及金字塔' },
-            { en: 'The Evolution of Smartphones', zh: '智慧型手機的演變' },
+            { en: 'The History of Sushi', zh: '壽司的歷史' },
             { en: 'The Secrets of Honeybees', zh: '蜜蜂的秘密' },
             { en: 'The Art of Coffee Making', zh: '咖啡的沖泡藝術' },
-            { en: 'The Origin of the Olympics', zh: '奧運的起源' },
-            { en: 'The Mysteries of the Deep Sea', zh: '深海的奧秘' },
-            { en: 'The Invention of the Internet', zh: '網際網路的發明' },
-            { en: 'The Wonders of the Human Brain', zh: '人腦的奇蹟' },
             { en: 'Exploring the Solar System', zh: '探索太陽系' },
             { en: 'The Science of Cooking', zh: '烹飪的科學' },
+            { en: 'The Wonders of the Human Brain', zh: '人腦的奇蹟' },
             { en: 'The History of Chocolate', zh: '巧克力的歷史' },
-            { en: 'Types of Clouds', zh: '雲的種類' },
             { en: 'The Importance of Sleep', zh: '睡眠的重要性' },
             { en: 'Famous Painters', zh: '著名的畫家們' },
             { en: 'How Volcanoes Work', zh: '火山如何運作' },
             { en: 'The World of Dinosaurs', zh: '恐龍的世界' },
-            { en: 'The Discovery of Penicillin', zh: '青黴素的發現' },
-            { en: 'The Eiffel Tower', zh: '艾菲爾鐵塔' },
-            { en: 'The Story of Cinderella', zh: '灰姑娘的故事' },
-            { en: 'The Life of a Star', zh: '一顆恆星的生命' },
-            { en: 'The Global Water Cycle', zh: '全球水循環' },
-            { en: 'The History of Money', zh: '金錢的歷史' },
-            { en: 'The Wonders of the Amazon Rainforest', zh: '亞馬遜雨林的奇蹟' },
-            { en: 'How Do Computers Work?', zh: '電腦如何運作' },
-            { en: 'The Story of the Roman Empire', zh: '羅馬帝國的故事' },
-            { en: 'The World of Sharks', zh: '鯊魚的世界' },
-            { en: 'The History of the Telescope', zh: '望遠鏡的歷史' },
-            { en: 'The Science of Rainbows', zh: '彩虹的科學' },
-            { en: 'The Great Pyramids', zh: '大金字塔' },
-            { en: 'The Life of a Lion', zh: '獅子的生活' },
-            { en: 'The Story of the Internet', zh: '網際網路的故事' },
-            { en: 'The Solar System', zh: '太陽系' },
-            { en: 'The Human Body', zh: '人體' },
-            { en: 'The History of the World Wide Web', zh: '全球資訊網的歷史' },
-            { en: 'The Wonders of the Ocean', zh: '海洋的奇蹟' },
-            { en: 'The History of Music', zh: '音樂的歷史' },
-            { en: 'The World of Birds', zh: '鳥類的世界' },
-            { en: 'The History of the Olympics', zh: '奧運會的歷史' },
-            { en: 'The Wonders of Space', zh: '太空的奇蹟' },
-            { en: 'The Story of the Wheel', zh: '輪子的故事' },
-            { en: 'The World of Insects', zh: '昆蟲的世界' },
-            { en: 'The Importance of Recycling', zh: '回收的重要性' },
-            { en: 'The Life of a Butterfly', zh: '蝴蝶的一生' },
-            { en: 'The History of Flight', zh: '飛行的歷史' },
-            { en: 'The Secrets of Trees', zh: '樹木的秘密' },
-            { en: 'The World of Sharks', zh: '鯊魚的世界' },
-            { en: 'The History of the Clock', zh: '時鐘的歷史' },
-            { en: 'The Science of Sound', zh: '聲音的科學' },
-            { en: 'The Life of a Penguin', zh: '企鵝的一生' },
-            { en: 'The History of the Compass', zh: '羅盤的歷史' },
-            { en: 'The Wonders of the Desert', zh: '沙漠的奇蹟' },
-            { en: 'The Story of the Bicycle', zh: '自行車的故事' },
-            { en: 'The History of Photography', zh: '攝影的歷史' },
-            { en: 'The World of Fish', zh: '魚類的世界' },
-            { en: 'The Science of Light', zh: '光的科學' },
-            { en: 'The Life of an Ant', zh: '螞蟻的一生' },
-            { en: 'The History of the Keyboard', zh: '鍵盤的歷史' },
-            { en: 'The Wonders of the Arctic', zh: '北極的奇蹟' },
-            { en: 'The Story of the Television', zh: '電視的故事' },
-            { en: 'The History of the Phone', zh: '電話的歷史' },
-            { en: 'The World of Reptiles', zh: '爬行類的世界' },
-            { en: 'The Science of Magnetism', zh: '磁性的科學' },
-            { en: 'The Life of a Dolphin', zh: '海豚的一生' },
-            { en: 'The History of the Microphone', zh: '麥克風的歷史' },
-            { en: 'The Wonders of the Rainforest', zh: '雨林的奇蹟' },
-            { en: 'The Story of the Radio', zh: '收音機的故事' },
-            { en: 'The History of the Computer', zh: '電腦的歷史' },
-            { en: 'The World of Amphibians', zh: '兩棲動物的世界' },
-            { en: 'The Science of Electricity', zh: '電力的科學' },
-            { en: 'The Life of a Koala', zh: '無尾熊的一生' },
-            { en: 'The History of the Battery', zh: '電池的歷史' },
-            { en: 'The Wonders of the Desert', zh: '沙漠的奇蹟' },
-            { en: 'The Story of the Camera', zh: '相機的故事' },
-            { en: 'The History of the Microphone', zh: '麥克風的歷史' },
-            { en: 'The World of Mammals', zh: '哺乳動物的世界' },
-            { en: 'The Science of Gravity', zh: '重力的科學' },
-            { en: 'The Life of a Whale', zh: '鯨魚的一生' },
-            { en: 'The History of the Spaceship', zh: '太空船的歷史' },
-            { en: 'The Wonders of the Sea', zh: '海洋的奇蹟' },
-            { en: 'The Story of the Refrigerator', zh: '冰箱的故事' },
-            { en: 'The History of the Internet', zh: '網際網路的歷史' },
-            { en: 'The World of Pandas', zh: '熊貓的世界' },
-            { en: 'The Science of the Stars', zh: '星星的科學' },
-            { en: 'The Life of a Tiger', zh: '老虎的一生' },
-            { en: 'The History of the Microscope', zh: '顯微鏡的歷史' },
-            { en: 'The Wonders of the Forest', zh: '森林的奇蹟' },
-            { en: 'The Story of the Telephone', zh: '電話的故事' },
-            { en: 'The History of the Bicycle', zh: '自行車的歷史' },
-            { en: 'The World of Elephants', zh: '大象的世界' },
-            { en: 'The Science of Light', zh: '光的科學' },
-            { en: 'The Life of a Giraffe', zh: '長頸鹿的一生' },
-            { en: 'The History of the Automobile', zh: '汽車的歷史' },
-            { en: 'The Wonders of the Volcano', zh: '火山的奇蹟' },
-            { en: 'The Story of the Compass', zh: '羅盤的故事' },
-            { en: 'The History of the Telescope', zh: '望遠鏡的歷史' },
-            { en: 'The World of Birds', zh: '鳥類的世界' },
-            { en: 'The Science of Sound', zh: '聲音的科學' }
+            { en: 'The Invention of the Internet', zh: '網際網路的發明' }
         ];
+
+        // Function to auto-resize textarea
+        function autoResizeTextarea() {
+            this.style.height = 'auto';
+            this.style.height = (this.scrollHeight) + 'px';
+        }
+
+        topicInput.addEventListener('input', autoResizeTextarea);
 
         function setActiveTab(tabBtnId, contentId) {
             document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
@@ -415,8 +342,7 @@
                         <p class="text-xl text-gray-800 font-medium">${highlightedEnglish}</p>
                         <button class="audio-button text-indigo-600 ml-4 flex-shrink-0" data-index="${index}">
                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-7 h-7">
-                                <path fill-rule="evenodd" d="M4.5 5.653c0-1.426 1.529-2.33 2.779-1.643l11.54 6.348c1.295.715 1.295 2.564 0 3.279l-11.54 6.347c-1.25.687-2.779-.236-2.779-1.643V5.653z" clip-rule="evenodd" />
-                            </svg>
+                                <path fill-rule="evenodd" d="M4.5 5.653c0-1.426 1.529-2.33 2.779-1.643l11.54 6.348c1.295.715 1.295 2.564 0 3.279l-11.54 6.347c-1.25.687-2.779-.236-2.779-1.643V5.653z" clip-rule="evenodd" /></svg>
                         </button>
                     </div>
                     <p class="text-base text-gray-600 leading-relaxed">${p.chinese}</p>
@@ -432,7 +358,7 @@
                 });
             });
 
-            displayExplanations(data.vocabulary, vocabContent, '單字');
+            displayExplanations(articleData.vocabulary, vocabContent, '單字');
 
             articleContainer.classList.remove('hidden');
             setActiveTab('articleTabBtn', 'articleContent');
@@ -573,6 +499,7 @@
             const randomIndex = Math.floor(Math.random() * randomTopics.length);
             const randomTopic = randomTopics[randomIndex];
             topicInput.value = `${randomTopic.en} (${randomTopic.zh})`;
+            autoResizeTextarea.call(topicInput); // 呼叫動態調整高度
         });
 
         generateBtn.addEventListener('click', generateContent);
