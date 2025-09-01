@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>英文閱讀網站</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #eef2f5 0%, #f7f9fc 100%);
+        }
+        .container {
+            max-width: 960px;
+        }
+        .loading-spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border-left-color: #4f46e5;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .tab-button {
+            border-bottom: 3px solid transparent;
+            transition: color 0.2s, border-bottom 0.2s;
+        }
+        .tab-button.active {
+            color: #4f46e5;
+            border-bottom: 3px solid #4f46e5;
+        }
+        .audio-button {
+            transition: transform 0.2s, color 0.2s;
+        }
+        .audio-button:hover {
+            transform: scale(1.1);
+            color: #3730a3;
+        }
+        .vocab-term {
+            cursor: pointer;
+            position: relative;
+        }
+        .vocab-term:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen flex flex-col items-center py-12 px-4">
+    <div class="container mx-auto p-10 bg-white rounded-3xl shadow-2xl border border-gray-200">
+        <h1 class="text-5xl font-extrabold text-center mb-8 text-gray-800 tracking-tight">英文閱讀網站</h1>
+        
+        <!-- Controls Section -->
+        <div class="space-y-6 mb-10">
+            <div class="flex flex-col sm:flex-row items-center space-y-4 sm:space-y-0 sm:space-x-4 w-full">
+                <input id="topicInput" type="text" placeholder="輸入文章主題，例如：大谷翔平" class="flex-grow p-4 rounded-xl border border-gray-300 focus:outline-none focus:ring-4 focus:ring-indigo-300 transition-all duration-200 text-lg shadow-sm" />
+                <button id="randomTopicBtn" class="bg-gray-100 text-gray-700 font-semibold py-4 px-8 rounded-xl hover:bg-gray-200 transition-colors duration-200 flex-shrink-0 shadow-sm border border-gray-300">隨機主題</button>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <!-- Difficulty Level -->
+                <div class="flex flex-col space-y-2">
+                    <label class="text-sm font-medium text-gray-700">難度等級</label>
+                    <select id="difficultySelect" class="p-4 rounded-xl border border-gray-300 focus:outline-none focus:ring-4 focus:ring-indigo-300 transition-all duration-200 text-lg shadow-sm">
+                        <option value="elementary">國小高年級</option>
+                        <option value="middle_school" selected>國中</option>
+                        <option value="high_school">高中</option>
+                        <option value="advanced_high_school">高中進階</option>
+                    </select>
+                </div>
+
+                <!-- Article Length -->
+                <div class="flex flex-col space-y-2">
+                    <label class="text-sm font-medium text-gray-700">文章長度</label>
+                    <select id="lengthSelect" class="p-4 rounded-xl border border-gray-300 focus:outline-none focus:ring-4 focus:ring-indigo-300 transition-all duration-200 text-lg shadow-sm">
+                        <option value="10">10 分鐘 (約 150 字)</option>
+                        <option value="15" selected>15 分鐘 (約 230 字)</option>
+                        <option value="20">20 分鐘 (約 300 字)</option>
+                    </select>
+                </div>
+            </div>
+
+            <button id="generateBtn" class="w-full bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-bold py-5 rounded-xl shadow-lg hover:from-indigo-600 hover:to-purple-700 transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-indigo-500 focus:ring-opacity-50 text-xl tracking-wide">
+                生成文章
+            </button>
+        </div>
+
+        <!-- Loading Spinner -->
+        <div id="loadingIndicator" class="hidden flex flex-col items-center justify-center py-10 text-center">
+            <div class="loading-spinner mb-4"></div>
+            <span class="text-lg text-gray-600 font-medium">正在生成文章與音訊，請稍候...</span>
+        </div>
+
+        <!-- Article Content -->
+        <div id="articleContainer" class="hidden relative p-8 bg-gray-50 rounded-3xl shadow-inner border border-gray-200">
+            <!-- Tabs -->
+            <div class="flex space-x-8 mb-6 border-b-2 border-gray-200">
+                <button id="articleTabBtn" class="tab-button font-extrabold text-gray-700 py-3 px-1 text-lg active">文章</button>
+                <button id="vocabTabBtn" class="tab-button font-extrabold text-gray-700 py-3 px-1 text-lg">單字解說</button>
+            </div>
+            
+            <h2 id="articleTitle" class="text-3xl font-bold mb-6 text-center text-gray-700"></h2>
+
+            <!-- Tab Content -->
+            <div id="articleContent" class="tab-content">
+                <div id="paragraphs" class="space-y-8"></div>
+            </div>
+            <div id="vocabContent" class="tab-content hidden"></div>
+
+            <!-- Vocabulary Popover moved inside articleContainer -->
+            <div id="vocabPopover" class="hidden absolute p-6 rounded-2xl shadow-2xl border border-gray-200 bg-white max-w-xs z-40 transition-opacity duration-200">
+                <h3 id="popoverTerm" class="text-xl font-bold text-indigo-600 mb-2"></h3>
+                <p id="popoverEn" class="text-gray-800 mb-1"></p>
+                <p id="popoverZh" class="text-gray-600 text-sm mb-3"></p>
+                <div id="popoverExample" class="mt-2 pl-4 border-l-2 border-indigo-300">
+                    <p id="popoverExampleEn" class="text-sm text-gray-500 italic"></p>
+                    <p id="popoverExampleZh" class="text-sm text-gray-500 italic"></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Message Modal -->
+    <div id="messageModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+        <div class="bg-white p-8 rounded-2xl shadow-2xl text-center max-w-sm w-full">
+            <p id="modalMessage" class="text-xl font-bold text-gray-800 mb-6"></p>
+            <button id="modalCloseBtn" class="bg-indigo-500 text-white font-semibold py-3 px-8 rounded-xl hover:bg-indigo-600 transition-colors duration-200">確定</button>
+        </div>
+    </div>
+
+    <script type="module">
+        // The API key is now securely handled on the backend.
+        const apiUrl = '/api/generate';
+        
+        const generateBtn = document.getElementById('generateBtn');
+        const randomTopicBtn = document.getElementById('randomTopicBtn');
+        const topicInput = document.getElementById('topicInput');
+        const difficultySelect = document.getElementById('difficultySelect');
+        const lengthSelect = document.getElementById('lengthSelect');
+        const loadingIndicator = document.getElementById('loadingIndicator');
+        const articleContainer = document.getElementById('articleContainer');
+        const articleTabBtn = document.getElementById('articleTabBtn');
+        const vocabTabBtn = document.getElementById('vocabTabBtn');
+        const articleContent = document.getElementById('articleContent');
+        const vocabContent = document.getElementById('vocabContent');
+        const paragraphsContainer = document.getElementById('paragraphs');
+
+        // Modal and Popover elements
+        const messageModal = document.getElementById('messageModal');
+        const modalMessage = document.getElementById('modalMessage');
+        const modalCloseBtn = document.getElementById('modalCloseBtn');
+        const vocabPopover = document.getElementById('vocabPopover');
+        
+        let currentAudio = null;
+        let audioContext = null;
+        let audioSources = [];
+        let articleData = null;
+
+        const randomTopics = [
+            { en: 'The Life of a Sloth', zh: '關於樹懶的一生' },
+            { en: 'The History of Pizza', zh: '披薩的歷史' },
+            { en: 'Why Cats Purr', zh: '為什麼貓會發出呼嚕聲' },
+            { en: 'The Great Wall of China', zh: '萬里長城' },
+            { en: 'How a Car Engine Works', zh: '汽車引擎如何運作' },
+            { en: 'The Aurora Borealis', zh: '北極光' },
+            { en: 'Famous Scientists', zh: '著名的科學家們' },
+            { en: 'The World of Spices', zh: '香料的世界' },
+            { en: 'Ancient Egyptian Pyramids', zh: '古埃及金字塔' },
+            { en: 'The Evolution of Smartphones', zh: '智慧型手機的演變' },
+            { en: 'The Secrets of Honeybees', zh: '蜜蜂的秘密' },
+            { en: 'The Art of Coffee Making', zh: '咖啡的沖泡藝術' },
+            { en: 'The Origin of the Olympics', zh: '奧運的起源' },
+            { en: 'The Mysteries of the Deep Sea', zh: '深海的奧秘' },
+            { en: 'The Invention of the Internet', zh: '網際網路的發明' },
+            { en: 'The Wonders of the Human Brain', zh: '人腦的奇蹟' },
+            { en: 'Exploring the Solar System', zh: '探索太陽系' },
+            { en: 'The Science of Cooking', zh: '烹飪的科學' },
+            { en: 'The History of Chocolate', zh: '巧克力的歷史' },
+            { en: 'Types of Clouds', zh: '雲的種類' },
+            { en: 'The Importance of Sleep', zh: '睡眠的重要性' },
+            { en: 'Famous Painters', zh: '著名的畫家們' },
+            { en: 'How Volcanoes Work', zh: '火山如何運作' },
+            { en: 'The World of Dinosaurs', zh: '恐龍的世界' },
+            { en: 'The Discovery of Penicillin', zh: '青黴素的發現' },
+            { en: 'The Eiffel Tower', zh: '艾菲爾鐵塔' },
+            { en: 'The Story of Cinderella', zh: '灰姑娘的故事' },
+            { en: 'The Life of a Star', zh: '一顆恆星的生命' },
+            { en: 'The Global Water Cycle', zh: '全球水循環' },
+            { en: 'The History of Money', zh: '金錢的歷史' },
+            { en: 'The Wonders of the Amazon Rainforest', zh: '亞馬遜雨林的奇蹟' },
+            { en: 'How Do Computers Work?', zh: '電腦如何運作' },
+            { en: 'The Story of the Roman Empire', zh: '羅馬帝國的故事' },
+            { en: 'The World of Sharks', zh: '鯊魚的世界' },
+            { en: 'The History of the Telescope', zh: '望遠鏡的歷史' },
+            { en: 'The Science of Rainbows', zh: '彩虹的科學' },
+            { en: 'The Great Pyramids', zh: '大金字塔' },
+            { en: 'The Life of a Lion', zh: '獅子的生活' },
+            { en: 'The Story of the Internet', zh: '網際網路的故事' },
+            { en: 'The Solar System', zh: '太陽系' },
+            { en: 'The Human Body', zh: '人體' },
+            { en: 'The History of the World Wide Web', zh: '全球資訊網的歷史' },
+            { en: 'The Wonders of the Ocean', zh: '海洋的奇蹟' },
+            { en: 'The History of Music', zh: '音樂的歷史' },
+            { en: 'The World of Birds', zh: '鳥類的世界' },
+            { en: 'The History of the Olympics', zh: '奧運會的歷史' },
+            { en: 'The Wonders of Space', zh: '太空的奇蹟' },
+            { en: 'The Story of the Wheel', zh: '輪子的故事' },
+            { en: 'The World of Insects', zh: '昆蟲的世界' },
+            { en: 'The Importance of Recycling', zh: '回收的重要性' },
+            { en: 'The Life of a Butterfly', zh: '蝴蝶的一生' },
+            { en: 'The History of Flight', zh: '飛行的歷史' },
+            { en: 'The Secrets of Trees', zh: '樹木的秘密' },
+            { en: 'The World of Sharks', zh: '鯊魚的世界' },
+            { en: 'The History of the Clock', zh: '時鐘的歷史' },
+            { en: 'The Science of Sound', zh: '聲音的科學' },
+            { en: 'The Life of a Penguin', zh: '企鵝的一生' },
+            { en: 'The History of the Compass', zh: '羅盤的歷史' },
+            { en: 'The Wonders of the Desert', zh: '沙漠的奇蹟' },
+            { en: 'The Story of the Bicycle', zh: '自行車的故事' },
+            { en: 'The History of Photography', zh: '攝影的歷史' },
+            { en: 'The World of Fish', zh: '魚類的世界' },
+            { en: 'The Science of Light', zh: '光的科學' },
+            { en: 'The Life of an Ant', zh: '螞蟻的一生' },
+            { en: 'The History of the Keyboard', zh: '鍵盤的歷史' },
+            { en: 'The Wonders of the Arctic', zh: '北極的奇蹟' },
+            { en: 'The Story of the Television', zh: '電視的故事' },
+            { en: 'The History of the Phone', zh: '電話的歷史' },
+            { en: 'The World of Reptiles', zh: '爬行類的世界' },
+            { en: 'The Science of Magnetism', zh: '磁性的科學' },
+            { en: 'The Life of a Dolphin', zh: '海豚的一生' },
+            { en: 'The History of the Microphone', zh: '麥克風的歷史' },
+            { en: 'The Wonders of the Rainforest', zh: '雨林的奇蹟' },
+            { en: 'The Story of the Radio', zh: '收音機的故事' },
+            { en: 'The History of the Computer', zh: '電腦的歷史' },
+            { en: 'The World of Amphibians', zh: '兩棲動物的世界' },
+            { en: 'The Science of Electricity', zh: '電力的科學' },
+            { en: 'The Life of a Koala', zh: '無尾熊的一生' },
+            { en: 'The History of the Battery', zh: '電池的歷史' },
+            { en: 'The Wonders of the Desert', zh: '沙漠的奇蹟' },
+            { en: 'The Story of the Camera', zh: '相機的故事' },
+            { en: 'The History of the Microphone', zh: '麥克風的歷史' },
+            { en: 'The World of Mammals', zh: '哺乳動物的世界' },
+            { en: 'The Science of Gravity', zh: '重力的科學' },
+            { en: 'The Life of a Whale', zh: '鯨魚的一生' },
+            { en: 'The History of the Spaceship', zh: '太空船的歷史' },
+            { en: 'The Wonders of the Sea', zh: '海洋的奇蹟' },
+            { en: 'The Story of the Refrigerator', zh: '冰箱的故事' },
+            { en: 'The History of the Internet', zh: '網際網路的歷史' },
+            { en: 'The World of Pandas', zh: '熊貓的世界' },
+            { en: 'The Science of the Stars', zh: '星星的科學' },
+            { en: 'The Life of a Tiger', zh: '老虎的一生' },
+            { en: 'The History of the Microscope', zh: '顯微鏡的歷史' },
+            { en: 'The Wonders of the Forest', zh: '森林的奇蹟' },
+            { en: 'The Story of the Telephone', zh: '電話的故事' },
+            { en: 'The History of the Bicycle', zh: '自行車的歷史' },
+            { en: 'The World of Elephants', zh: '大象的世界' },
+            { en: 'The Science of Light', zh: '光的科學' },
+            { en: 'The Life of a Giraffe', zh: '長頸鹿的一生' },
+            { en: 'The History of the Automobile', zh: '汽車的歷史' },
+            { en: 'The Wonders of the Volcano', zh: '火山的奇蹟' },
+            { en: 'The Story of the Compass', zh: '羅盤的故事' },
+            { en: 'The History of the Telescope', zh: '望遠鏡的歷史' },
+            { en: 'The World of Birds', zh: '鳥類的世界' },
+            { en: 'The Science of Sound', zh: '聲音的科學' }
+        ];
+
+        function setActiveTab(tabBtnId, contentId) {
+            document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.add('hidden'));
+            document.getElementById(tabBtnId).classList.add('active');
+            document.getElementById(contentId).classList.remove('hidden');
+        }
+
+        async function playAudio(audioData, button) {
+            const index = button.dataset.index;
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
+
+            // If the same button is clicked, toggle play/pause
+            if (currentAudio && currentAudio.dataset.index === index) {
+                if (currentAudio.paused) {
+                    currentAudio.play();
+                    button.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-7 h-7"><path fill-rule="evenodd" d="M6.75 5.25a.75.75 0 01.75-.75H9a.75.75 0 01.75.75v13.5a.75.75 0 01-.75.75H7.5a.75.75 0 01-.75-.75V5.25zm7.5 0A.75.75 0 0115 4.5h1.5a.75.75 0 01.75.75v13.5a.75.75 0 01-.75.75H15a.75.75 0 01-.75-.75V5.25z" clip-rule="evenodd" /></svg>`;
+                } else {
+                    currentAudio.pause();
+                    button.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-7 h-7"><path fill-rule="evenodd" d="M4.5 5.653c0-1.426 1.529-2.33 2.779-1.643l11.54 6.348c1.295.715 1.295 2.564 0 3.279l-11.54 6.347c-1.25.687-2.779-.236-2.779-1.643V5.653z" clip-rule="evenodd" /></svg>`;
+                }
+                return;
+            }
+
+            // Stop any currently playing audio
+            if (currentAudio) {
+                currentAudio.pause();
+                const playingButton = document.querySelector(`.audio-button[data-index="${currentAudio.dataset.index}"]`);
+                if (playingButton) {
+                     playingButton.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-7 h-7"><path fill-rule="evenodd" d="M4.5 5.653c0-1.426 1.529-2.33 2.779-1.643l11.54 6.348c1.295.715 1.295 2.564 0 3.279l-11.54 6.347c-1.25.687-2.779-.236-2.779-1.643V5.653z" clip-rule="evenodd" /></svg>`;
+                }
+            }
+
+            currentAudio = new Audio(audioSources[index]);
+            currentAudio.dataset.index = index;
+            currentAudio.play();
+            button.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-7 h-7"><path fill-rule="evenodd" d="M6.75 5.25a.75.75 0 01.75-.75H9a.75.75 0 01.75.75v13.5a.75.75 0 01-.75.75H7.5a.75.75 0 01-.75-.75V5.25zm7.5 0A.75.75 0 0115 4.5h1.5a.75.75 0 01.75.75v13.5a.75.75 0 01-.75.75H15a.75.75 0 01-.75-.75V5.25z" clip-rule="evenodd" /></svg>`;
+
+            currentAudio.onended = () => {
+                button.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-7 h-7"><path fill-rule="evenodd" d="M4.5 5.653c0-1.426 1.529-2.33 2.779-1.643l11.54 6.348c1.295.715 1.295 2.564 0 3.279l-11.54 6.347c-1.25.687-2.779-.236-2.779-1.643V5.653z" clip-rule="evenodd" /></svg>`;
+            };
+        }
+
+        async function fetchAudio(text) {
+            const payload = {
+                contents: [{
+                    parts: [{ text: text }]
+                }],
+                generationConfig: {
+                    responseModalities: ["AUDIO"],
+                    speechConfig: {
+                        voiceConfig: {
+                            prebuiltVoiceConfig: { voiceName: "Puck" }
+                        }
+                    }
+                }
+            };
+
+            const base64ToArrayBuffer = (base64) => {
+                const binaryString = window.atob(base64);
+                const len = binaryString.length;
+                const bytes = new Uint8Array(len);
+                for (let i = 0; i < len; i++) {
+                    bytes[i] = binaryString.charCodeAt(i);
+                }
+                return bytes.buffer;
+            };
+
+            const pcmToWav = (pcm, sampleRate) => {
+                const view = new DataView(new ArrayBuffer(44 + pcm.length * 2));
+                const writeString = (view, offset, string) => {
+                    for (let i = 0; i < string.length; i++) {
+                        view.setUint8(offset + i, string.charCodeAt(i));
+                    }
+                };
+
+                // RIFF header
+                writeString(view, 0, 'RIFF');
+                view.setUint32(4, 36 + pcm.length * 2, true);
+                writeString(view, 8, 'WAVE');
+                // fmt chunk
+                writeString(view, 12, 'fmt ');
+                view.setUint32(16, 16, true);
+                view.setUint16(20, 1, true); // PCM format
+                view.setUint16(22, 1, true); // Mono
+                view.setUint32(24, sampleRate, true);
+                view.setUint32(28, sampleRate * 2, true); // Byte rate
+                view.setUint16(32, 2, true); // Block align
+                view.setUint16(34, 16, true); // Bits per sample
+                // data chunk
+                writeString(view, 36, 'data');
+                view.setUint32(40, pcm.length * 2, true);
+
+                // Write PCM data
+                const pcm16 = new Int16Array(view.buffer, 44);
+                for (let i = 0; i < pcm.length; i++) {
+                    pcm16[i] = pcm[i];
+                }
+
+                return new Blob([view], { type: 'audio/wav' });
+            };
+
+            const response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ type: 'audio', payload }),
+            });
+
+            const result = await response.json();
+            const audioDataString = result?.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+            if (audioDataString) {
+                const arrayBuffer = base64ToArrayBuffer(audioDataString);
+                const pcm16 = new Int16Array(arrayBuffer);
+                const wavBlob = pcmToWav(pcm16, 24000);
+                return URL.createObjectURL(wavBlob);
+            }
+            return null;
+        }
+
+        function highlightVocabulary(text, vocabularies) {
+            let highlightedText = text;
+            vocabularies.forEach(vocab => {
+                // Use a regular expression with a global and case-insensitive flag
+                // Also use word boundaries (\b) to match whole words/phrases
+                const termRegex = new RegExp('\\b' + vocab.term.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&') + '\\b', 'gi');
+                highlightedText = highlightedText.replace(termRegex, match => {
+                    return `<span class="vocab-term text-indigo-600 font-bold" data-term="${vocab.term}">${match}</span>`;
+                });
+            });
+            return highlightedText;
+        }
+
+        function displayArticle(data) {
+            document.getElementById('articleTitle').textContent = data.title;
+            paragraphsContainer.innerHTML = '';
+            audioSources = [];
+            data.paragraphs.forEach((p, index) => {
+                const paragraphDiv = document.createElement('div');
+                paragraphDiv.classList.add('p-6', 'rounded-2xl', 'bg-white', 'border', 'border-gray-200', 'shadow-md', 'hover:shadow-lg', 'transition-shadow', 'duration-200');
+                
+                const highlightedEnglish = highlightVocabulary(p.english, data.vocabulary);
+
+                paragraphDiv.innerHTML = `
+                    <div class="flex items-start mb-3">
+                        <p class="text-xl text-gray-800 font-medium">${highlightedEnglish}</p>
+                        <button class="audio-button text-indigo-600 ml-4 flex-shrink-0" data-index="${index}">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-7 h-7">
+                                <path fill-rule="evenodd" d="M4.5 5.653c0-1.426 1.529-2.33 2.779-1.643l11.54 6.348c1.295.715 1.295 2.564 0 3.279l-11.54 6.347c-1.25.687-2.779-.236-2.779-1.643V5.653z" clip-rule="evenodd" />
+                            </svg>
+                        </button>
+                    </div>
+                    <p class="text-base text-gray-600 leading-relaxed">${p.chinese}</p>
+                `;
+                paragraphsContainer.appendChild(paragraphDiv);
+                audioSources.push(p.audioData);
+            });
+
+            document.querySelectorAll('.audio-button').forEach(button => {
+                button.addEventListener('click', () => {
+                    const index = button.dataset.index;
+                    playAudio(articleData.paragraphs[index].audioData, button);
+                });
+            });
+
+            displayExplanations(data.vocabulary, vocabContent, '單字');
+
+            articleContainer.classList.remove('hidden');
+            setActiveTab('articleTabBtn', 'articleContent');
+        }
+        
+        function displayExplanations(items, container, type) {
+            container.innerHTML = '';
+            if (items && items.length > 0) {
+                const ul = document.createElement('ul');
+                ul.classList.add('list-none', 'space-y-6', 'text-gray-700');
+                items.forEach(item => {
+                    const li = document.createElement('li');
+                    li.classList.add('bg-white', 'p-6', 'rounded-xl', 'shadow-md', 'border', 'border-gray-200');
+                    let content = `
+                        <p class="text-lg font-bold text-indigo-700">${item.term}</p>
+                        <p class="text-gray-800 mt-2">${item.explanation_en}</p>
+                        <p class="text-gray-600">${item.explanation_zh}</p>
+                    `;
+                    if (item.example_en && item.example_zh) {
+                        content += `
+                            <div class="mt-3 pl-4 border-l-2 border-indigo-300">
+                                <p class="text-sm text-gray-500 italic">例句 (EN): ${item.example_en}</p>
+                                <p class="text-sm text-gray-500 italic">例句 (ZH): ${item.example_zh}</p>
+                            </div>
+                        `;
+                    }
+                    li.innerHTML = content;
+                    ul.appendChild(li);
+                });
+                container.appendChild(ul);
+            } else {
+                container.innerHTML = `<p class="text-gray-500 italic text-center p-8 rounded-xl bg-gray-100">目前沒有相關${type}內容。</p>`;
+            }
+        }
+        
+        async function generateContent() {
+            const topic = topicInput.value;
+            if (!topic) {
+                showModal("請輸入一個主題！");
+                return;
+            }
+
+            const difficulty = difficultySelect.value;
+            const length = lengthSelect.value;
+            
+            // Hide previous content and show loading spinner
+            articleContainer.classList.add('hidden');
+            loadingIndicator.classList.remove('hidden');
+            
+            const wordCountMap = {
+                '10': '約 150 字',
+                '15': '約 230 字',
+                '20': '約 300 字'
+            };
+
+            const systemPrompt = `
+                你是一位專業的英文教師，專門為學習者生成英文閱讀文章。
+                請根據使用者提供的「主題」、「難度」和「長度」，撰寫一篇英文文章。
+                文章必須符合以下要求：
+                1. 每個段落都必須有英文原文和中文翻譯。
+                2. 根據文章內容，提供15到20個單字解說。
+                3. 單字解說的內容要根據文章的難度做調整，例如「國小高年級」難度時，連簡單的單字也需要解釋。
+                4. 文章的總長度要接近使用者選擇的長度：${wordCountMap[length]}
+                5. 請確保英文和中文翻譯的內容語意一致。
+                6. 產出的格式必須是 JSON，包含以下結構：
+                   - "title": 文章標題 (string)
+                   - "paragraphs": 一個陣列，每個元素都是一個包含 "english" 和 "chinese" 的物件。
+                   - "vocabulary": 一個陣列，每個元素都是一個包含 "term" (單字), "explanation_en" (英文解說), "explanation_zh" (中文解說), "example_en" (英文例句), 和 "example_zh" (中文例句) 的物件。
+                7. 解說中的 "term" 不僅限於單字，可以是片語或句子。
+            `;
+
+            const userQuery = `
+                請撰寫一篇英文文章。
+                主題: ${topic}
+                難度: ${difficulty}
+                長度: ${length} 分鐘
+            `;
+
+            try {
+                const textPayload = {
+                    contents: [{ parts: [{ text: userQuery }] }],
+                    systemInstruction: { parts: [{ text: systemPrompt }] },
+                    generationConfig: {
+                        responseMimeType: "application/json",
+                    }
+                };
+                
+                // Call the backend to get the article text
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ type: 'text', payload: textPayload }),
+                });
+                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(`HTTP error! status: ${response.status}, message: ${JSON.stringify(errorData)}`);
+                }
+                
+                const result = await response.json();
+                const jsonText = result.candidates?.[0]?.content?.parts?.[0]?.text;
+                if (!jsonText) {
+                    throw new Error('No content returned from API.');
+                }
+                
+                articleData = JSON.parse(jsonText);
+                
+                // Fetch audio for each paragraph concurrently
+                const audioPromises = articleData.paragraphs.map(p => fetchAudio(p.english));
+                const audioUrls = await Promise.all(audioPromises);
+                
+                // Attach audio data (URL) to each paragraph and store globally
+                articleData.paragraphs.forEach((p, index) => {
+                    p.audioData = audioUrls[index];
+                });
+                audioSources = audioUrls;
+
+                displayArticle(articleData);
+
+            } catch (error) {
+                console.error("生成文章失敗:", error);
+                showModal("生成文章失敗，請再試一次。");
+            } finally {
+                loadingIndicator.classList.add('hidden');
+            }
+        }
+
+        function showModal(message) {
+            modalMessage.textContent = message;
+            messageModal.classList.remove('hidden');
+        }
+
+        modalCloseBtn.addEventListener('click', () => {
+            messageModal.classList.add('hidden');
+        });
+        
+        randomTopicBtn.addEventListener('click', () => {
+            const randomIndex = Math.floor(Math.random() * randomTopics.length);
+            const randomTopic = randomTopics[randomIndex];
+            topicInput.value = `${randomTopic.en} (${randomTopic.zh})`;
+        });
+
+        generateBtn.addEventListener('click', generateContent);
+
+        articleTabBtn.addEventListener('click', () => {
+            hideVocabPopover();
+            setActiveTab('articleTabBtn', 'articleContent');
+        });
+        
+        vocabTabBtn.addEventListener('click', () => {
+            hideVocabPopover();
+            setActiveTab('vocabTabBtn', 'vocabContent');
+        });
+
+        // Event delegation for vocab terms in paragraphs
+        paragraphsContainer.addEventListener('click', (event) => {
+            const termElement = event.target.closest('.vocab-term');
+            if (termElement) {
+                const term = termElement.dataset.term;
+                const vocabEntry = articleData.vocabulary.find(v => v.term === term);
+                if (vocabEntry) {
+                    showVocabPopover(event, termElement, vocabEntry);
+                }
+            } else {
+                hideVocabPopover();
+            }
+        });
+
+        function showVocabPopover(event, termElement, vocab) {
+            document.getElementById('popoverTerm').textContent = vocab.term;
+            document.getElementById('popoverEn').textContent = vocab.explanation_en;
+            document.getElementById('popoverZh').textContent = vocab.explanation_zh;
+            document.getElementById('popoverExampleEn').textContent = `例句 (EN): ${vocab.example_en}`;
+            document.getElementById('popoverExampleZh').textContent = `例句 (ZH): ${vocab.example_zh}`;
+            
+            vocabPopover.style.opacity = '0';
+            vocabPopover.classList.remove('hidden');
+
+            // Get the bounding rectangles of the term element and the article container
+            const termRect = termElement.getBoundingClientRect();
+            const articleRect = articleContainer.getBoundingClientRect();
+
+            // Calculate the position relative to the article container
+            let popoverX = termRect.left - articleRect.left;
+            let popoverY = termRect.top - articleRect.top + termRect.height + 10; // 10px offset
+
+            // Adjust position if it goes out of bounds
+            const popoverWidth = vocabPopover.offsetWidth;
+            const popoverHeight = vocabPopover.offsetHeight;
+
+            if (popoverX + popoverWidth > articleRect.width) {
+                popoverX = articleRect.width - popoverWidth - 20; // 20px padding from right
+            }
+            if (popoverX < 0) {
+                popoverX = 20; // 20px padding from left
+            }
+
+            vocabPopover.style.left = `${popoverX}px`;
+            vocabPopover.style.top = `${popoverY}px`;
+            vocabPopover.style.opacity = '1';
+
+            event.stopPropagation();
+        }
+
+        function hideVocabPopover() {
+            vocabPopover.classList.add('hidden');
+        }
+
+        document.addEventListener('click', (event) => {
+            if (!vocabPopover.contains(event.target) && !event.target.classList.contains('vocab-term')) {
+                hideVocabPopover();
+            }
+        });
+    </script>
+</body>
+</html>
